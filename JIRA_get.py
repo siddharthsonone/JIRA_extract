@@ -7,7 +7,7 @@ from tqdm import tqdm
 import pymssql
 import json
 
-creds = json.load(open(r'C:\Users\siddharth.sonone\Desktop\JIRA\cred.json'))
+creds = json.load(open(r'cred.json'))
 
 server = creds["db_server"]
 usrname = creds["db_username"]
@@ -23,8 +23,7 @@ options = creds["server"]
 jira = JIRA(options, basic_auth=(creds["username"], creds["password"]))
 
 ip_query = '''
-project = "Technical Operations Service Desk" 
-AND Key in ('TOSD-90183', 'TOSD-92931', 'TOSD-92818', 'TOSD-90654')
+enter JQL query here
 
 '''
 scope_tickets = jira.search_issues(ip_query,
@@ -35,7 +34,7 @@ bad=[]
 for ticket in tqdm(scope_tickets):
     
     if ('Brandon' in ticket.fields.creator.displayName) and  ('Professional' in ticket.fields.summary) or ('Synchronization ' in ticket.fields.summary):
-        print 'Addon'
+        #print 'Uptime'
         changelog = ticket.changelog
         t_uptime = []
         entry = []
@@ -68,7 +67,7 @@ for ticket in tqdm(scope_tickets):
         
 
     elif 'tosd.addon' in ticket.fields.labels: #Addons
-        print 'Uptime' 
+        #print 'Addons' 
                     
         changelog = ticket.changelog
         t_addon = []
@@ -106,9 +105,10 @@ for ticket in tqdm(scope_tickets):
         connec.commit() 
 
     elif 'TO' in ticket.fields.summary:
-        #Implementation Mapping Module
+        #print 'Implementation Mapping Module'
         pass 
        
+connec.close()
 
 
 
