@@ -1,4 +1,3 @@
-
 import re
 import os
 import time
@@ -23,62 +22,96 @@ date_format = "%Y-%m-%d %H:%M:%S"
 options = creds["server"]
 jira = JIRA(options, basic_auth=(creds["username"], creds["password"]))
 
-ip_query = '''project = "Technical Operations Service Desk" and labels = 'tosd.addon' and createdDate > endOfMonth(-2)'''
+ip_query = '''
+project = "Technical Operations Service Desk" 
+AND Key in ('TOSD-90183', 'TOSD-92931', 'TOSD-92818', 'TOSD-90654')
+
+'''
 scope_tickets = jira.search_issues(ip_query,
-                                   startAt=0, maxResults=200, 
+                                   startAt=0, maxResults=400, 
                                    validate_query=True,  expand='changelog', json_result=None)
-
-#get the list of Entries
-print 'The total number of tickets are {%d}'%len(scope_tickets) 
-bad_tickets_sql = []
-bad_tickets_jira = []
+insert_date = dt.datetime.now().date()
+bad=[]
 for ticket in tqdm(scope_tickets):
-    
-    changelog = ticket.changelog
-    transitions = []
-    entry = []
-    for history in changelog.histories:
+    t_uptime = []
+    if ('Brandon' in ticket.fields.creator.displayName) and  ('Professional' in ticket.fields.summary) or ('Synchronization ' in ticket.fields.summary):
+        print 'Addon'
+        changelog = ticket.changelog
         
-        for item in history.items:
+        entry = []
+        for history in changelog.histories:
             
-            if item.field == 'status':
-                #print str(ticket).encode('ascii', 'ignore'),(ticket.fields.summary).encode('ascii', 'ignore'),str(ticket.fields.creator).encode('ascii', 'ignore'),str(ticket.fields.customfield_11406).encode('ascii', 'ignore'),str(ticket.fields.customfield_13506).encode('ascii', 'ignore'),str(ticket.fields.customfield_14100).encode('ascii', 'ignore'),(ticket.fields.duedate).encode('ascii', 'ignore'),dt.datetime.strptime((history.created.replace('T', ' ').split('.')[0]),date_format),(history.author.displayName).encode('ascii', 'ignore'),item.fromString,item.toString
-                #get transitions in a list
+            for item in history.items:
+            
+           
+                if item.field == 'status':
+                    
+                    entry = ((ticket), #Ticket
+                                (ticket.fields.summary).encode('ascii','ignore').replace("'",""), #Summary
+                                ticket.fields.creator.displayName.encode('ascii','ignore'), #Creator
+                                dt.datetime.strptime((history.created.replace('T', ' ').split('.')[0]),date_format), #DateTime Object
+                                item.fromString.encode('ascii','ignore'), #from
+                                item.toString.encode('ascii','ignore'),  #to
+                                (history.author.displayName).encode('ascii','ignore'), #Handeld By
+                                insert_date)
+                    t_uptime.append(entry) 
+                    
+        while len(t_uptime) > 1:
+            
+            print t_uptime[0][0], t_uptime[0][1], t_uptime[0][2], t_uptime[0][3], t_uptime[0][4], t_uptime[0][5], t_uptime[0][6], (t_uptime[1][3] - t_uptime[0][3]),t_uptime[0][7]
+                                           
+            cursor_.execute( '''INSERT INTO JIRA_Dump_Uptime ([TICKET ID], [Summary], [Creator],  [DateTime] ,[Status From], [Status To], [Assignee], [Time Spent],[InsertDate]) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s')''' % (t_uptime[0][0], t_uptime[0][1]
+                                , t_uptime[0][2], t_uptime[0][3]
+                                , t_uptime[0][4], t_uptime[0][5]
+                                , t_uptime[0][6], (t_uptime[1][3] - t_uptime[0][3]),t_uptime[0][7]))
+            t_uptime.pop()
+                   
+            
+
+        connec.commit() 
+        
+
+    elif 'tosd.addon' in ticket.fields.labels: #Addons
+        print 'Uptime' 
+        t_addon = []               
+        changelog = ticket.changelog
+        for history in changelog.histories:
+            for item in history.items:
+                if item.field == 'status':
+                    addon_entry = (
+                                str(ticket).encode('ascii', 'ignore') #Ticket
+                                ,((ticket.fields.summary)).replace("'","").replace(u"\u2018", "").replace(u"\u2019", "").encode('ascii', 'ignore') #Summary
+                                ,str(ticket.fields.creator).encode('ascii', 'ignore') #Creator 
+                                ,(str(ticket.fields.customfield_11406)).replace(u"\u2018", "").replace(u"\u2019", "").replace("'"," ").encode('ascii', 'ignore') #PMS
+                                ,str(ticket.fields.customfield_13506).encode('ascii', 'ignore') #Quantity
+                                ,str(ticket.fields.customfield_14100).encode('ascii', 'ignore') #ZocdocProviderID
+                                ,str(ticket.fields.duedate).encode('ascii', 'ignore') #DueDate
+                                ,dt.datetime.strptime((history.created.replace('T', ' ').split('.')[0]),date_format) #TimeStamp
+                                ,(history.author.displayName).replace(u"\u2018", "").replace(u"\u2019", "") #Assignee
+                                ,(item.fromString) #fromStatus
+                                ,(item.toString) #toStatus
+                                )
+                    t_addon.append(addon_entry)
+                   
+        
+        while len(t_addon) > 1:
+            
+            print t_addon[0][0], t_addon[0][1], t_addon[0][2], t_addon[0][3], t_addon[0][4], t_addon[0][5], t_addon[0][6], t_addon[0][7], t_addon[0][8], t_addon[0][9], t_addon[0][10], (t_addon[1][7] - t_addon[0][7]) 
+            
+            cursor_.execute( '''INSERT INTO JIRA_dump ([TICKET ID], [Summary], [Submitter], [PMS], [Quantity], [Zocdoc ProviderID], [Due Date], [DateTime] ,[Assignee], [Status From], [Status To],[Time Spent]) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')''' % (t_addon[0][0], t_addon[0][1], t_addon[0][2], t_addon[0][3]
+                , t_addon[0][4], t_addon[0][5], t_addon[0][6], t_addon[0][7]
+                , t_addon[0][8], t_addon[0][9], t_addon[0][10], (t_addon[1][7] - t_addon[0][7])))
                 
-                entry = (
-                str(ticket).encode('ascii', 'ignore') #Ticket
-                ,(str(ticket.fields.summary)).replace("'","").replace(u"\u2018", "").replace(u"\u2019", "").encode('ascii', 'ignore') #Summary
-                ,str(ticket.fields.creator).encode('ascii', 'ignore') #Creator 
-                ,(str(ticket.fields.customfield_11406)).replace(u"\u2018", "").replace(u"\u2019", "").replace("'"," ").encode('ascii', 'ignore') #PMS
-                ,str(ticket.fields.customfield_13506).encode('ascii', 'ignore') #Quantity
-                ,str(ticket.fields.customfield_14100).encode('ascii', 'ignore') #ZocdocProviderID
-                ,str(ticket.fields.duedate).encode('ascii', 'ignore') #DueDate
-                ,dt.datetime.strptime((history.created.replace('T', ' ').split('.')[0]),date_format) #TimeStamp
-                ,(history.author.displayName).replace(u"\u2018", "").replace(u"\u2019", "") #Assignee
-                ,(item.fromString) #fromStatus
-                ,(item.toString) #toStatus
-                            )
-                transitions.append(entry)
-               
-    
-    while len(transitions) > 1:
-        try:
-            cursor_.execute( '''INSERT INTO JIRA_dump ([TICKET ID], [Summary], [Submitter], [PMS], [Quantity], [Zocdoc ProviderID], [Due Date], [DateTime] ,[Assignee], [Status From], [Status To],[Time Spent]) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')''' % (transitions[0][0], transitions[0][1], transitions[0][2], transitions[0][3]
-                , transitions[0][4], transitions[0][5], transitions[0][6], transitions[0][7]
-                , transitions[0][8], transitions[0][9], transitions[0][10], (transitions[1][7] - transitions[0][7])))
-            print transitions[0][0], transitions[0][1], transitions[0][2], transitions[0][3], transitions[0][4], transitions[0][5], transitions[0][6], transitions[0][7], transitions[0][8], transitions[0][9], transitions[0][10], (transitions[1][7] - transitions[0][7]) 
-            transitions.pop(0)
-        except:
-            bad_tickets_sql.append(entry)
-            print '''INSERT INTO JIRA_dump ([TICKET ID], [Summary], [Submitter], [PMS], [Quantity], [Zocdoc ProviderID], [Due Date], [DateTime] ,[Assignee], [Status From], [Status To],[Time Spent]) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')''' % (transitions[0][0], transitions[0][1], transitions[0][2], transitions[0][3]
-                , transitions[0][4], transitions[0][5], transitions[0][6], transitions[0][7]
-                , transitions[0][8], transitions[0][9], transitions[0][10], (transitions[1][7] - transitions[0][7]))
-            continue
+            t_addon.pop(0)
 
-    connec.commit()
+        connec.commit() 
 
-connec.close()
-        
-
-        
+    elif 'TO' in ticket.fields.summary:
+        #Implementation Mapping Module
+        pass 
        
+
+
+
+
+
