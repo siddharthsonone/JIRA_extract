@@ -7,7 +7,7 @@ from tqdm import tqdm
 import pymssql
 import json
 
-creds = json.load(open(r'cred.json'))
+creds = json.load(open(r'C:\Users\siddharth.sonone\Desktop\JIRA\cred.json'))
 
 server = creds["db_server"]
 usrname = creds["db_username"]
@@ -33,17 +33,16 @@ scope_tickets = jira.search_issues(ip_query,
 insert_date = dt.datetime.now().date()
 bad=[]
 for ticket in tqdm(scope_tickets):
-    t_uptime = []
+    
     if ('Brandon' in ticket.fields.creator.displayName) and  ('Professional' in ticket.fields.summary) or ('Synchronization ' in ticket.fields.summary):
         print 'Addon'
         changelog = ticket.changelog
-        
+        t_uptime = []
         entry = []
         for history in changelog.histories:
             
             for item in history.items:
             
-           
                 if item.field == 'status':
                     
                     entry = ((ticket), #Ticket
@@ -65,19 +64,21 @@ for ticket in tqdm(scope_tickets):
                                 , t_uptime[0][4], t_uptime[0][5]
                                 , t_uptime[0][6], (t_uptime[1][3] - t_uptime[0][3]),t_uptime[0][7]))
             t_uptime.pop()
-                   
-            
-
         connec.commit() 
         
 
     elif 'tosd.addon' in ticket.fields.labels: #Addons
         print 'Uptime' 
-        t_addon = []               
+                    
         changelog = ticket.changelog
+        t_addon = []
+
         for history in changelog.histories:
+            
             for item in history.items:
+                
                 if item.field == 'status':
+                    
                     addon_entry = (
                                 str(ticket).encode('ascii', 'ignore') #Ticket
                                 ,((ticket.fields.summary)).replace("'","").replace(u"\u2018", "").replace(u"\u2019", "").encode('ascii', 'ignore') #Summary
@@ -93,7 +94,6 @@ for ticket in tqdm(scope_tickets):
                                 )
                     t_addon.append(addon_entry)
                    
-        
         while len(t_addon) > 1:
             
             print t_addon[0][0], t_addon[0][1], t_addon[0][2], t_addon[0][3], t_addon[0][4], t_addon[0][5], t_addon[0][6], t_addon[0][7], t_addon[0][8], t_addon[0][9], t_addon[0][10], (t_addon[1][7] - t_addon[0][7]) 
@@ -103,7 +103,6 @@ for ticket in tqdm(scope_tickets):
                 , t_addon[0][8], t_addon[0][9], t_addon[0][10], (t_addon[1][7] - t_addon[0][7])))
                 
             t_addon.pop(0)
-
         connec.commit() 
 
     elif 'TO' in ticket.fields.summary:
