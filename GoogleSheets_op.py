@@ -61,7 +61,7 @@ for ticket in scope_tickets:
                 entry = map(lambda entry: (entry.encode('ascii,ignore'
                             ) if type(entry) == 'str' else entry), [
                     ticket,
-                    ticket.fields.summary.replace("'", ''),
+                    ticket.fields.summary.replace("'", '').replace("Professional Locked - ", '').replace("Synchronization Down for SyncId ", ''),
                     ticket.fields.creator.displayName,
                     dt.datetime.strptime(history.created.replace('T',
                             ' ').split('.')[0], date_format),
